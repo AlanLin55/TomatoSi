@@ -1,0 +1,794 @@
++﻿#include <iostream>
+#include<opencv2/opencv.hpp>
+#include <stdio.h>
+#include <math.h>
+#include <time.h>
+
+using namespace cv;
+using namespace std;
+
+
+struct NodeinCurve {
+	int Red;
+	int Green;
+	int Blue;
+	int row;
+	int col;
+};
+
+struct MatEle {
+	bool Iscolored;
+	bool Ischecked;
+	int Red;
+	int Green;
+	int Blue;
+	int PosInArray;
+	double Coe;
+};
+
+struct ColorPoint {
+	double Red;
+	double Green;
+	double Blue;
+};
+
+struct Coordinate {
+	int row;
+	int col;
+};
+
+int Contiguous(int row, int col, MatEle** a, int maxrow, int maxcol) {
+	int sum = 0;
+	if (row > 0 && col > 0) {
+		if (a[row - 1][col - 1].Red == a[row][col].Red && a[row - 1][col - 1].Green == a[row][col].Green && a[row - 1][col - 1].Blue == a[row][col].Blue && a[row - 1][col - 1].Ischecked == 0) {
+			sum++;
+		}
+	}
+	if (row <maxrow - 1 && col < maxcol - 1) {
+		if (a[row + 1][col + 1].Red == a[row][col].Red && a[row + 1][col + 1].Green == a[row][col].Green && a[row + 1][col + 1].Blue == a[row][col].Blue && a[row + 1][col + 1].Ischecked == 0) {
+			sum++;
+		}
+	}
+	if (row > 0 && col < maxcol - 1) {
+		if (a[row - 1][col + 1].Red == a[row][col].Red && a[row - 1][col + 1].Green == a[row][col].Green && a[row - 1][col + 1].Blue == a[row][col].Blue && a[row - 1][col + 1].Ischecked == 0) {
+			sum++;
+		}
+	}
+	if (row < maxrow - 1 && col > 0) {
+		if (a[row + 1][col - 1].Red == a[row][col].Red && a[row + 1][col - 1].Green == a[row][col].Green && a[row + 1][col - 1].Blue == a[row][col].Blue && a[row + 1][col - 1].Ischecked == 0) {
+			sum++;
+		}
+	}
+	if (row > 0) {
+		if (a[row - 1][col].Red == a[row][col].Red && a[row - 1][col].Green == a[row][col].Green && a[row - 1][col].Blue == a[row][col].Blue && a[row - 1][col].Ischecked == 0) {
+			sum++;
+		}
+	}
+	if (row < maxrow - 1) {
+		if (a[row + 1][col].Red == a[row][col].Red && a[row + 1][col].Green == a[row][col].Green && a[row + 1][col].Blue == a[row][col].Blue && a[row + 1][col].Ischecked == 0) {
+			sum++;
+		}
+	}
+	if (col > 0) {
+		if (a[row][col - 1].Red == a[row][col].Red && a[row][col - 1].Green == a[row][col].Green && a[row][col - 1].Blue == a[row][col].Blue && a[row][col - 1].Ischecked == 0) {
+			sum++;
+		}
+	}
+	if (col < maxcol - 1) {
+		if (a[row][col + 1].Red == a[row][col].Red && a[row][col + 1].Green == a[row][col].Green && a[row][col + 1].Blue == a[row][col].Blue && a[row][col + 1].Ischecked == 0) {
+			sum++;
+		}
+	}
+	return sum;
+}
+
+Coordinate NextPoint(int row, int col, int maxrow, int maxcol, MatEle** a) {
+	Coordinate pin;
+	if (row > 0 && col > 0) {
+		if (a[row - 1][col - 1].Red == a[row][col].Red && a[row - 1][col - 1].Green == a[row][col].Green && a[row - 1][col - 1].Blue == a[row][col].Blue && a[row - 1][col - 1].Ischecked == 0) {
+			pin.row = row - 1;
+			pin.col = col - 1;
+			return pin;
+		}
+	}
+	if (row < maxrow - 1 && col < maxcol - 1) {
+		if (a[row + 1][col + 1].Red == a[row][col].Red && a[row + 1][col + 1].Green == a[row][col].Green && a[row + 1][col + 1].Blue == a[row][col].Blue && a[row + 1][col + 1].Ischecked == 0) {
+			pin.row = row + 1;
+			pin.col = col + 1;
+			return pin;
+		}
+	}
+	if (row > 0 && col < maxcol - 1) {
+		if (a[row - 1][col + 1].Red == a[row][col].Red && a[row - 1][col + 1].Green == a[row][col].Green && a[row - 1][col + 1].Blue == a[row][col].Blue && a[row - 1][col + 1].Ischecked == 0) {
+			pin.row = row - 1;
+			pin.col = col + 1;
+			return pin;
+		}
+	}
+	if (row < maxrow - 1 && col > 0) {
+		if (a[row + 1][col - 1].Red == a[row][col].Red && a[row + 1][col - 1].Green == a[row][col].Green && a[row + 1][col - 1].Blue == a[row][col].Blue && a[row + 1][col - 1].Ischecked == 0) {
+			pin.row = row + 1;
+			pin.col = col - 1;
+			return pin;
+		}
+	}
+	if (row > 0) {
+		if (a[row - 1][col].Red == a[row][col].Red && a[row - 1][col].Green == a[row][col].Green && a[row - 1][col].Blue == a[row][col].Blue && a[row - 1][col].Ischecked == 0) {
+			pin.row = row - 1;
+			pin.col = col;
+			return pin;
+		}
+	}
+	if (row < maxrow - 1) {
+		if (a[row + 1][col].Red == a[row][col].Red && a[row + 1][col].Green == a[row][col].Green && a[row + 1][col].Blue == a[row][col].Blue && a[row + 1][col].Ischecked == 0) {
+			pin.row = row + 1;
+			pin.col = col;
+			return pin;
+		}
+	}
+	if (col > 0) {
+		if (a[row][col - 1].Red == a[row][col].Red && a[row][col - 1].Green == a[row][col].Green && a[row][col - 1].Blue == a[row][col].Blue && a[row][col - 1].Ischecked == 0) {
+			pin.row = row;
+			pin.col = col - 1;
+			return pin;
+		}
+	}
+	if (col < maxcol - 1) {
+		if (a[row][col + 1].Red == a[row][col].Red && a[row][col + 1].Green == a[row][col].Green && a[row][col + 1].Blue == a[row][col].Blue && a[row][col + 1].Ischecked == 0) {
+			pin.row = row;
+			pin.col = col + 1;
+			return pin;
+		}
+	}
+}
+
+void PreSearch(int Startrow, int Startcol, MatEle** a, vector<NodeinCurve>& Difcurve, int Maxrow, int Maxcol) {
+	a[Startrow][Startcol].Ischecked = 1;
+	NodeinCurve temp;
+	temp.row = Startrow;
+	temp.col = Startcol;
+	temp.Red = a[Startrow][Startcol].Red;
+	temp.Green = a[Startrow][Startcol].Green;
+	temp.Blue = a[Startrow][Startcol].Blue;
+	int Mrow, Mcol;
+	if (Contiguous(Startrow, Startcol, a, Maxrow, Maxcol) == 0) {
+		Difcurve.push_back(temp);
+	}
+	else if (Contiguous(Startrow, Startcol, a, Maxrow, Maxcol) == 1) {
+		Coordinate tempC = NextPoint(Startrow, Startcol, Maxrow, Maxcol, a);
+		Mrow = tempC.row; Mcol = tempC.col;
+		PreSearch(Mrow, Mcol, a, Difcurve, Maxrow, Maxcol);
+		Difcurve.push_back(temp);
+	}
+}
+
+void AftSearch(int Startrow, int Startcol, MatEle** a, vector<NodeinCurve>& Difcurve, int Maxrow, int Maxcol) {
+	a[Startrow][Startcol].Ischecked = 1;
+	NodeinCurve temp;
+	temp.row = Startrow;
+	temp.col = Startcol;
+	temp.Red = a[Startrow][Startcol].Red;
+	temp.Green = a[Startrow][Startcol].Green;
+	temp.Blue = a[Startrow][Startcol].Blue;
+	int Mrow, Mcol;
+	if (Contiguous(Startrow, Startcol, a, Maxrow, Maxcol) == 0) {
+		Difcurve.push_back(temp);
+	}
+	else if (Contiguous(Startrow, Startcol, a, Maxrow, Maxcol) == 1) {
+		Coordinate tempC = NextPoint(Startrow, Startcol, Maxrow, Maxcol, a);
+		Mrow = tempC.row; Mcol = tempC.col;
+		Difcurve.push_back(temp);
+		AftSearch(Mrow, Mcol, a, Difcurve, Maxrow, Maxcol);
+	}
+}
+
+void Search(int Startrow, int Startcol, MatEle** a, vector<NodeinCurve> &Difcurve, int Maxrow, int Maxcol) {
+	a[Startrow][Startcol].Ischecked = 1;
+	NodeinCurve temp;
+	temp.row = Startrow;
+	temp.col = Startcol;
+	temp.Red = a[Startrow][Startcol].Red;
+	temp.Green = a[Startrow][Startcol].Green;
+	temp.Blue = a[Startrow][Startcol].Blue;
+	int Mrow, Mcol;
+	//printf("searchstarted\n");
+	if (Contiguous(Startrow, Startcol, a, Maxrow, Maxcol) == 0) {
+		Difcurve.push_back(temp);
+	}
+	else if (Contiguous(Startrow, Startcol, a, Maxrow, Maxcol) == 2) {
+		Coordinate tempC = NextPoint(Startrow, Startcol, Maxrow, Maxcol, a);
+		Mrow = tempC.row; Mcol = tempC.col;
+		PreSearch(Mrow, Mcol, a, Difcurve, Maxrow, Maxcol);
+		Difcurve.push_back(temp);
+		//printf("temppushed");
+		tempC = NextPoint(Startrow, Startcol, Maxrow, Maxcol, a);
+		Mrow = tempC.row; Mcol = tempC.col;
+		AftSearch(Mrow, Mcol, a, Difcurve, Maxrow, Maxcol);
+	}
+	else if (Contiguous(Startrow, Startcol, a, Maxrow, Maxcol) == 1) {
+		Coordinate tempC = NextPoint(Startrow, Startcol, Maxrow, Maxcol, a);
+		Mrow = tempC.row; Mcol = tempC.col;
+		Difcurve.push_back(temp);
+		AftSearch(Mrow, Mcol, a, Difcurve, Maxrow, Maxcol);
+	}
+}
+
+void FindCurve(MatEle** a, vector<NodeinCurve>& Difcurve, int Maxrow, int Maxcol) {
+	int i = 0, j = 0, Startrow, Startcol;
+	bool flag = 0;
+	for (i = 0; i < Maxrow; i++) {
+		if (flag == 1)break;
+		for (j = 0; j < Maxcol; j++) {
+			if ((a[i][j].Red != 255 || a[i][j].Green != 255 || a[i][j].Blue != 255)&&flag==0) {
+				Startrow = i;
+				Startcol = j;
+				printf("The Start Point is(%d,%d)\n", i, j);
+				Search(Startrow, Startcol, a, Difcurve, Maxrow, Maxcol);
+				flag = 1;
+				break;
+			}
+		}
+	}
+	if (i == Maxrow) {
+		printf("No Curve Detected!\n");
+	}
+	else {
+		printf("Detected a Curve\n");
+		printf("Please Assign Colours\n");
+	}
+}
+
+int main()
+{
+	Mat img2 = imread("F:\\diffcurve\\u2.bmp", 1);
+	clock_t start, end;
+	
+	int col, row, i, j, count, n, iniRed, iniGreen, iniBlue;
+	vector<ColorPoint> x;
+	ColorPoint cptemp;
+	vector<double> b;
+	vector<NodeinCurve> Midcurve;
+	vector<NodeinCurve> Clockcurve;
+	vector<NodeinCurve> AClockcurve;
+
+	col = img2.cols; row = img2.rows;
+	iniRed = 255; iniGreen = 255; iniBlue = 255;
+
+	MatEle Mattemp;
+	Mattemp.Blue = iniBlue; Mattemp.Coe = 0; Mattemp.Green = iniGreen; Mattemp.Iscolored = 0; Mattemp.PosInArray = 0; Mattemp.Red = iniRed;
+	Mattemp.Ischecked = 0;
+	MatEle** a;
+	a = new MatEle * [223];    //number of rows
+	for (i = 0; i < row; i++) {
+		a[i] = new MatEle[242];       //number of columns
+	}
+	for (i = 0; i < row; i++) {
+		for (j = 0; j < col; j++) {
+			a[i][j] = Mattemp;
+		}
+	}
+
+	printf("%d %d\n", col, row);
+	count = 0;
+
+	for (i = 0; i < row; i++) {
+		uchar* data = img2.ptr<uchar>(i);
+		for (j = 0; j < col; j++) {  //矩阵从1-1开始计,周围一圈归0
+			a[i][j].Red = (int)data[j * 3];
+			a[i][j].Green = (int)data[j * 3 + 1];
+			a[i][j].Blue = (int)data[j * 3 + 2];
+		}
+	}
+
+	double ScalarN, ScalarS, ScalarW, ScalarE;
+	printf("Map detected, please enter scalar\n");
+	scanf_s("%lf %lf %lf %lf", &ScalarN, &ScalarS, &ScalarW, &ScalarE);
+	printf("%f %f %f %f\n", ScalarN, ScalarS, ScalarW, ScalarE);
+
+	start = clock();
+
+	n = (int)x.size();
+
+	//已有图像不用赋值从这开始注销
+	/*FindCurve(a, Midcurve, row, col);
+	int Midlength = (int)Midcurve.size(); printf("%d",Midlength); //printf("The First  Coordinate is (%d, %d)\n", Midcurve[0].row, Midcurve[0].col); // 标记行
+	for (i = 0; i < Midlength; i++) {
+		a[Midcurve[i].row][Midcurve[i].col].Red = 255;
+		a[Midcurve[i].row][Midcurve[i].col].Green = 255;
+		a[Midcurve[i].row][Midcurve[i].col].Blue = 255;
+	}
+	
+	NodeinCurve tempN, temptemp;
+	int rowdif, coldif, rearrowC, rearcolC, rearrowA, rearcolA, Distance;
+	tempN.Red = 0; tempN.Green = 0; tempN.Blue = 0;
+	temptemp.Red = 0; temptemp.Green = 0; temptemp.Blue = 0;
+	rowdif = (Midcurve[1].col - Midcurve[0].col) * 2;
+	coldif = (Midcurve[0].row - Midcurve[1].row) * 2;
+	tempN.row = Midcurve[0].row + rowdif; rearrowC = tempN.row;
+	tempN.col = Midcurve[0].col + coldif; rearcolC = tempN.col;
+	//printf("%d %d\n", tempN.row, tempN.col); //到这是对的
+	Clockcurve.push_back(tempN);
+	rowdif = -1 * rowdif;
+	coldif = -1 * coldif;
+	tempN.row = Midcurve[0].row + rowdif; rearrowA = tempN.row;
+	tempN.col = Midcurve[0].col + coldif; rearcolA = tempN.col;
+	AClockcurve.push_back(tempN);   //给颜色曲线的起始点赋值  记录颜色曲线最后一个点的坐标
+	for (i = 1; i < Midlength - 1; i++) {
+		rowdif = (Midcurve[i + 1].col - Midcurve[i - 1].col);
+		coldif = (Midcurve[i - 1].row - Midcurve[i + 1].row);
+		tempN.row = Midcurve[i].row + rowdif;
+		tempN.col = Midcurve[i].col + coldif;
+		//printf("%d %d\n", tempN.row, tempN.col); //到这是对的
+		//printf("%d %d\n", rearrowC, rearcolC);
+		Distance = pow(tempN.row - rearrowC, 2) + pow(tempN.col - rearcolC, 2);  //printf("Distance = %d\n", Distance);
+		if (Distance > 2) {
+			while (tempN.row != rearrowC && tempN.col != rearcolC) {
+				rowdif = Midcurve[i + 1].row - Midcurve[i].row;
+				coldif = Midcurve[i + 1].col - Midcurve[i].col;
+				temptemp.row = rearrowC + rowdif;
+				temptemp.col = rearcolC + coldif;
+				if (Clockcurve.size() > 1) {
+					if (pow(temptemp.row - Clockcurve[Clockcurve.size()-2].row, 2) + pow(temptemp.col - Clockcurve[Clockcurve.size() - 2].col, 2) == 2) {
+						Clockcurve.pop_back();
+						Clockcurve.push_back(temptemp);
+						rearrowC = temptemp.row;
+						rearcolC = temptemp.col;
+					}
+					else {
+						Clockcurve.push_back(temptemp); //printf("pushback%d %d\n", tempN.row, tempN.col);
+						rearrowC = temptemp.row;
+						rearcolC = temptemp.col;
+					}
+				}
+				else {
+					Clockcurve.push_back(temptemp);
+					rearrowC = temptemp.row;
+					rearcolC = temptemp.col;
+				}
+			}
+			if (tempN.row == rearrowC && tempN.col != rearcolC) {
+				while (tempN.col != rearcolC) {
+					coldif = (tempN.col - rearcolC) / abs(tempN.col - rearcolC);
+					temptemp.col = rearcolC + coldif;
+					temptemp.row = rearrowC;
+					if (Clockcurve.size() > 1) {
+						if (pow(temptemp.row - Clockcurve[Clockcurve.size() - 2].row, 2) + pow(temptemp.col - Clockcurve[Clockcurve.size() - 2].col, 2) == 2) {
+							Clockcurve.pop_back();
+							Clockcurve.push_back(temptemp);
+							rearcolC = temptemp.col;
+						}
+						else {
+							Clockcurve.push_back(temptemp); //printf("pushback%d %d\n", temptemp.row, temptemp.col);
+							rearrowC = temptemp.row;
+							rearcolC = temptemp.col;
+						}
+					}
+					else {
+						Clockcurve.push_back(temptemp);
+						rearrowC = temptemp.row;
+						rearcolC = temptemp.col;
+					}
+				}
+			}
+			if (tempN.row != rearrowC && tempN.col == rearcolC) {
+				while (tempN.row != rearrowC) {
+					rowdif = (tempN.row - rearrowC) / abs(tempN.row - rearrowC);
+					temptemp.row = rearrowC + rowdif;
+					temptemp.col = rearcolC;
+					if (Clockcurve.size() > 1) {
+						if (pow(temptemp.row - Clockcurve[Clockcurve.size() - 2].row, 2) + pow(temptemp.col - Clockcurve[Clockcurve.size() - 2].col, 2) == 2) {
+							Clockcurve.pop_back();
+							Clockcurve.push_back(temptemp);
+							rearrowC = temptemp.row;
+						}
+						else {
+							Clockcurve.push_back(temptemp); //printf("pushback%d %d\n", temptemp.row, temptemp.col);
+							rearrowC = temptemp.row;
+							rearcolC = temptemp.col;
+						}
+					}
+					else {
+						Clockcurve.push_back(temptemp);
+						rearrowC = temptemp.row;
+						rearcolC = temptemp.col;
+					}
+				}
+			}
+		}
+		else if(Distance <= 2 && Distance > 0){
+			if (Clockcurve.size() > 1) {
+				if (pow(tempN.row - Clockcurve[Clockcurve.size() - 2].row, 2) + pow(tempN.col - Clockcurve[Clockcurve.size() - 2].col, 2) == 2) {
+					Clockcurve.pop_back();
+					Clockcurve.push_back(tempN); //printf("pushback%d %d\n", tempN.row, tempN.col);
+					rearrowC = tempN.row;
+					rearcolC = tempN.col;
+				}
+				else {
+					Clockcurve.push_back(tempN); //printf("pushback%d %d\n", tempN.row, tempN.col);
+					rearrowC = tempN.row;
+					rearcolC = tempN.col;
+				}
+			}
+			else {
+				Clockcurve.push_back(tempN); //printf("pushback2%d %d\n", tempN.row, tempN.col);
+				rearrowC = tempN.row;
+				rearcolC = tempN.col;
+			}
+		}
+	}  //找到并存储沿着顺时针方向的颜色曲线
+	for (i = 1; i < Midlength - 1; i++) {
+		rowdif = (Midcurve[i - 1].col - Midcurve[i + 1].col);
+		coldif = (Midcurve[i + 1].row - Midcurve[i - 1].row);
+		tempN.row = Midcurve[i].row + rowdif;
+		tempN.col = Midcurve[i].col + coldif;
+		Distance = pow(tempN.row - rearrowA, 2) + pow(tempN.col - rearcolA, 2);
+		if (Distance > 2) {
+			while (tempN.row != rearrowA && tempN.col != rearcolA) {
+				rowdif = Midcurve[i + 1].row - Midcurve[i].row;
+				coldif = Midcurve[i + 1].col - Midcurve[i].col;
+				temptemp.row = rearrowA + rowdif;
+				temptemp.col = rearcolA + coldif;
+				if (AClockcurve.size() > 1) {
+					if (pow(temptemp.row - AClockcurve[AClockcurve.size() - 2].row, 2) + pow(temptemp.col - AClockcurve[AClockcurve.size() - 2].col, 2) == 2) {
+						AClockcurve.pop_back();
+						AClockcurve.push_back(temptemp);
+						rearrowA = temptemp.row;
+						rearcolA = temptemp.col;
+					}
+					else {
+						AClockcurve.push_back(temptemp); //printf("pushback%d %d\n", temptemp.row, temptemp.col);
+						rearrowA = temptemp.row;
+						rearcolA = temptemp.col;
+					}
+				}
+				else {
+					AClockcurve.push_back(temptemp);
+					rearrowA = temptemp.row;
+					rearcolA = temptemp.col;
+				}
+			}
+			if (tempN.row == rearrowA && tempN.col != rearcolA) {
+				while (tempN.col != rearcolA) {
+					coldif = (tempN.col - rearcolA) / abs(tempN.col - rearcolA);
+					temptemp.col = rearcolA + coldif;
+					temptemp.row = rearrowA;
+					if (AClockcurve.size() > 1) {
+						if (pow(temptemp.row - AClockcurve[AClockcurve.size() - 2].row, 2) + pow(temptemp.col - AClockcurve[AClockcurve.size() - 2].col, 2) == 2) {
+							AClockcurve.pop_back();
+							AClockcurve.push_back(temptemp);
+							rearcolA = temptemp.col;
+						}
+						else {
+							AClockcurve.push_back(temptemp);  //printf("pushback%d %d\n", temptemp.row, temptemp.col);
+							rearrowA = temptemp.row;
+							rearcolA = temptemp.col;
+						}
+					}
+					else {
+						AClockcurve.push_back(temptemp);
+						rearrowA = temptemp.row;
+						rearcolA = temptemp.col;
+					}
+				}
+			}
+			if (tempN.row != rearrowA && tempN.col == rearcolA) {
+				while (tempN.row != rearrowA) {
+					rowdif = (tempN.row - rearrowA) / abs(tempN.row - rearrowA);
+					temptemp.row = rearrowA + rowdif;
+					temptemp.col = rearcolA;
+					if (AClockcurve.size() > 1) {
+						if (pow(temptemp.row - AClockcurve[AClockcurve.size() - 2].row, 2) + pow(temptemp.col - AClockcurve[AClockcurve.size() - 2].col, 2) == 2) {
+							AClockcurve.pop_back();
+							AClockcurve.push_back(temptemp);
+							rearrowA = temptemp.row;
+						}
+						else {
+							AClockcurve.push_back(temptemp); //printf("pushback%d %d\n", temptemp.row, temptemp.col);
+							rearrowA = temptemp.row;
+							rearcolA = temptemp.col;
+						}
+					}
+					else {
+						AClockcurve.push_back(temptemp);
+						rearrowA = temptemp.row;
+						rearcolA = temptemp.col;
+					}
+				}
+			}
+		}
+		else if (Distance <= 2 && Distance > 0) {
+			if (AClockcurve.size() > 1) {
+				if (pow(tempN.row - AClockcurve[AClockcurve.size() - 2].row, 2) + pow(tempN.col - AClockcurve[AClockcurve.size() - 2].col, 2) == 2) {
+					AClockcurve.pop_back();
+					AClockcurve.push_back(tempN); //printf("pushback%d %d\n", tempN.row, tempN.col);
+					rearrowA = tempN.row;
+					rearcolA = tempN.col;
+				}
+				else {
+					AClockcurve.push_back(tempN); //printf("pushback%d %d\n", tempN.row, tempN.col);
+					rearrowA = tempN.row;
+					rearcolA = tempN.col;
+				}
+			}
+			else {
+				AClockcurve.push_back(tempN); //printf("pushback2%d %d\n", tempN.row, tempN.col);
+				rearrowA = tempN.row;
+				rearcolA = tempN.col;
+			}
+		}
+	}   //找到并存储沿着逆时针方向的颜色曲线
+
+	for (i = 0; i < Clockcurve.size(); i++) {
+		uchar* data = img2.ptr<uchar>(Clockcurve[i].row);
+		data[Clockcurve[i].col * 3] = 0;
+		data[Clockcurve[i].col * 3 + 1] = 0;
+		data[Clockcurve[i].col * 3 + 2] = 0;
+	}
+	for (i = 0; i < AClockcurve.size(); i++) {
+		uchar* data = img2.ptr<uchar>(AClockcurve[i].row);
+		data[AClockcurve[i].col * 3] = 0;
+		data[AClockcurve[i].col * 3 + 1] = 0;
+		data[AClockcurve[i].col * 3 + 2] = 0;
+	}
+	int Clocklength = (int)Clockcurve.size();
+	int AClocklength = (int)AClockcurve.size();
+
+	int LeftRed, LeftGreen, LeftBlue, RightRed, RightGreen, RightBlue;
+	scanf_s("%d %d %d", &LeftRed, &LeftGreen, &LeftBlue);
+	printf("Please Assign Colours\n");
+	scanf_s("%d %d %d", &RightRed, &RightGreen, &RightBlue);
+	printf("Please Assign Colours\n");
+	Clockcurve[0].Red = LeftRed; Clockcurve[Clocklength - 1].Red = RightRed;
+	Clockcurve[0].Blue = LeftBlue; Clockcurve[Clocklength - 1].Blue = RightBlue;
+	Clockcurve[0].Green = LeftGreen; Clockcurve[Clocklength - 1].Green = RightGreen;
+
+	double DiffRed, DiffGreen, DiffBlue;
+	DiffRed = (double)(RightRed - LeftRed) / (Clocklength - 1);
+	DiffGreen = (double)(RightGreen - LeftGreen) / (Clocklength - 1);
+	DiffBlue = (double)(RightBlue - LeftBlue) / (Clocklength - 1);
+	for (i = 0; i < Clocklength - 1; i++) {
+		Clockcurve[i].Red = (int)(Clockcurve[0].Red + DiffRed * i);
+		Clockcurve[i].Green = (int)(Clockcurve[0].Green + DiffGreen * i);
+		Clockcurve[i].Blue = (int)(Clockcurve[0].Blue + DiffBlue * i);
+		a[Clockcurve[i].row][Clockcurve[i].col].Red = Clockcurve[i].Red;
+		a[Clockcurve[i].row][Clockcurve[i].col].Green = Clockcurve[i].Green;
+		a[Clockcurve[i].row][Clockcurve[i].col].Blue = Clockcurve[i].Blue;
+	}
+
+	scanf_s("%d %d %d", &LeftRed, &LeftGreen, &LeftBlue);
+	printf("Please Assign Colours\n");
+	scanf_s("%d %d %d", &RightRed, &RightGreen, &RightBlue);
+	AClockcurve[0].Red = LeftRed; AClockcurve[AClocklength - 1].Red = RightRed;
+	AClockcurve[0].Blue = LeftBlue; AClockcurve[AClocklength - 1].Blue = RightBlue;
+	AClockcurve[0].Green = LeftGreen; AClockcurve[AClocklength - 1].Green = RightGreen;
+
+	DiffRed = (double)(RightRed - LeftRed) / (AClocklength - 1);  printf("%f\n", DiffRed);
+	DiffGreen = (double)(RightGreen - LeftGreen) / (AClocklength - 1);
+	DiffBlue = (double)(RightBlue - LeftBlue) / (AClocklength - 1);
+	for (i = 0; i < AClocklength; i++) {
+		AClockcurve[i].Red = (int)(AClockcurve[0].Red + DiffRed * i);
+		AClockcurve[i].Green = (int)(AClockcurve[0].Green + DiffGreen * i);
+		AClockcurve[i].Blue = (int)(AClockcurve[0].Blue + DiffBlue * i); //printf("%d %d %d\n", AClockcurve[i].Red, AClockcurve[i].Green, AClockcurve[i].Blue);
+		a[AClockcurve[i].row][AClockcurve[i].col].Red = AClockcurve[i].Red;
+		a[AClockcurve[i].row][AClockcurve[i].col].Green = AClockcurve[i].Green;
+		a[AClockcurve[i].row][AClockcurve[i].col].Blue = AClockcurve[i].Blue;
+	}
+	//已有图像不用赋值从这结束注销
+	*/
+	//开始计算
+	
+	for (i = 0; i < row; i++) {
+		for (j = 0; j < col; j++) {  //矩阵从1-1开始计,周围一圈归0
+			if (a[i][j].Red == iniRed && a[i][j].Green == iniGreen && a[i][j].Blue == iniBlue) {
+				a[i][j].Iscolored = 0;
+				cptemp.Red = iniRed;
+				cptemp.Blue = iniBlue;
+				cptemp.Green = iniGreen;
+
+			
+				//按点的种类指定方程中的系数
+				if (i > 0 && i < row - 1 && j > 0 && j < col - 1) {
+					a[i][j].Coe = -ScalarS - ScalarN - ScalarE - ScalarW;
+				}
+				else if (i == 0 && j > 0 && j < col - 1) {
+					a[i][j].Coe = -ScalarS - ScalarE - ScalarW;
+				}
+				else if (i == row - 1 && j > 0 && j < col - 1) {
+					a[i][j].Coe = -ScalarN - ScalarE - ScalarW;
+				}
+				else if (i > 0 && i < row - 1 && j == 0) {
+					a[i][j].Coe = -ScalarS - ScalarN - ScalarE;
+				}
+				else if (i > 0 && i < row - 1 && j == col - 1) {
+					a[i][j].Coe = -ScalarS - ScalarN - ScalarW;
+				}
+				else if (i == 0 && j == 0) {
+					a[i][j].Coe = -ScalarS - ScalarE;
+				}
+				else if (i == 0 && j == col - 1) {
+					a[i][j].Coe = -ScalarS - ScalarW;
+				}
+				else if (i == row - 1 && j == col - 1) {
+					a[i][j].Coe = -ScalarN - ScalarW;
+				}
+				else if (i == row - 1 && j == 0) {
+					a[i][j].Coe = -ScalarN - ScalarE;
+				}
+			}
+			else {
+				a[i][j].Iscolored = 1;
+				cptemp.Red = a[i][j].Red;
+				cptemp.Green = a[i][j].Green;
+				cptemp.Blue = a[i][j].Blue;
+			}
+			a[i][j].PosInArray = count++;
+			x.push_back(cptemp); //x相当于把整个二位数组拉成一维数组,用Iscolored判断是否需要对这个点染色(这个点是否初始已被染色)
+			b.push_back(0);
+		}
+	}
+	
+	double eps = 0.001, w = 1;  //w是松弛系数，w=1就是常规GS迭代 eps=误差
+	int current, k, kmax;
+	kmax = 1000;
+
+	for (k = 0; k < kmax; k++)
+	{
+		double norm = 0;
+		//cout << x[1].Red << " " << b[1] << " " << x[a[2][1].PosInArray].Red << " " << x[a[0][1].PosInArray].Red << " " << x[a[1][2].PosInArray].Red << " " << x[a[1][0].PosInArray].Red << endl;
+		//cout << a[1][1].Coe << endl;
+		for (i = 0; i < row; i++)
+		{
+			for (j = 0; j < col; j++) {
+				if (a[i][j].Iscolored == 0) {
+					current = a[i][j].PosInArray;
+					double x0 = x[current].Red;
+					if (i > 0 && i < row - 1 && j > 0 && j < col - 1) {
+						x[current].Red = (double)(x0 + w * (b[current] - ScalarS * x[a[i + 1][j].PosInArray].Red - ScalarN * x[a[i - 1][j].PosInArray].Red - ScalarE * x[a[i][j + 1].PosInArray].Red - ScalarW * x[a[i][j - 1].PosInArray].Red - x0 * a[i][j].Coe) / a[i][j].Coe);
+					}else if(i==0&& j > 0 && j < col - 1){
+						x[current].Red = (double)(x0 + w * (b[current] - ScalarS * x[a[i + 1][j].PosInArray].Red - ScalarE * x[a[i][j + 1].PosInArray].Red - ScalarW * x[a[i][j - 1].PosInArray].Red - x0 * a[i][j].Coe) / a[i][j].Coe);
+					}else if (i == row - 1 && j > 0 && j < col - 1) {
+						x[current].Red = (double)(x0 + w * (b[current] - ScalarN * x[a[i - 1][j].PosInArray].Red - ScalarE * x[a[i][j + 1].PosInArray].Red - ScalarW * x[a[i][j - 1].PosInArray].Red - x0 * a[i][j].Coe) / a[i][j].Coe);
+					}else if (i > 0 && i < row - 1 && j == 0) {
+						x[current].Red = (double)(x0 + w * (b[current] - ScalarN * x[a[i - 1][j].PosInArray].Red - ScalarS * x[a[i + 1][j].PosInArray].Red - ScalarE * x[a[i][j + 1].PosInArray].Red - x0 * a[i][j].Coe) / a[i][j].Coe);
+					}else if (i > 0 && i < row - 1 && j == col - 1) {
+						x[current].Red = (double)(x0 + w * (b[current] - ScalarN * x[a[i - 1][j].PosInArray].Red - ScalarS * x[a[i + 1][j].PosInArray].Red - ScalarW * x[a[i][j - 1].PosInArray].Red - x0 * a[i][j].Coe) / a[i][j].Coe);
+					}else if (i == 0 && j == 0) {
+						x[current].Red = (double)(x0 + w * (b[current] - ScalarS * x[a[i + 1][j].PosInArray].Red - ScalarE * x[a[i][j + 1].PosInArray].Red - x0 * a[i][j].Coe) / a[i][j].Coe);
+					}else if (i == 0 && j == col - 1) {
+						x[current].Red = (double)(x0 + w * (b[current] - ScalarS * x[a[i + 1][j].PosInArray].Red - ScalarW * x[a[i][j - 1].PosInArray].Red - x0 * a[i][j].Coe) / a[i][j].Coe);
+					}else if (i == row - 1 && j == col - 1) {
+						x[current].Red = (double)(x0 + w * (b[current] - ScalarN * x[a[i - 1][j].PosInArray].Red - ScalarW * x[a[i][j - 1].PosInArray].Red - x0 * a[i][j].Coe) / a[i][j].Coe);
+					}else if (i == row - 1 && j == 0) {
+						x[current].Red = (double)(x0 + w * (b[current] - ScalarN * x[a[i - 1][j].PosInArray].Red - ScalarE * x[a[i][j + 1].PosInArray].Red - x0 * a[i][j].Coe) / a[i][j].Coe);
+					}
+					if (fabs(x[current].Red - x0) > norm) norm = fabs(x[current].Red - x0);  //norm计算范数
+				}
+			}	
+		}
+		if (norm < eps)  break;
+	}
+
+	for (k = 0; k < kmax; k++)
+	{
+		double norm = 0;
+		//cout << x[1].Red << " " << b[1] << " " << x[a[2][1].PosInArray].Red << " " << x[a[0][1].PosInArray].Red << " " << x[a[1][2].PosInArray].Red << " " << x[a[1][0].PosInArray].Red << endl;
+		for (i = 0; i < row; i++)
+		{
+			for (j = 0; j < col; j++) {
+				if (a[i][j].Iscolored == 0) {
+					current = a[i][j].PosInArray;
+					double x0 = x[current].Red;
+					if (i > 0 && i < row - 1 && j > 0 && j < col - 1) {
+						x[current].Green = (double)(x0 + w * (b[current] - ScalarS * x[a[i + 1][j].PosInArray].Green - ScalarN * x[a[i - 1][j].PosInArray].Green - ScalarE * x[a[i][j + 1].PosInArray].Green - ScalarW * x[a[i][j - 1].PosInArray].Green - x0 * a[i][j].Coe) / a[i][j].Coe);
+					}
+					else if (i == 0 && j > 0 && j < col - 1) {
+						x[current].Green = (double)(x0 + w * (b[current] - ScalarS * x[a[i + 1][j].PosInArray].Green - ScalarE * x[a[i][j + 1].PosInArray].Green - ScalarW * x[a[i][j - 1].PosInArray].Green - x0 * a[i][j].Coe) / a[i][j].Coe);
+					}
+					else if (i == row - 1 && j > 0 && j < col - 1) {
+						x[current].Green = (double)(x0 + w * (b[current] - ScalarN * x[a[i - 1][j].PosInArray].Green - ScalarE * x[a[i][j + 1].PosInArray].Green - ScalarW * x[a[i][j - 1].PosInArray].Green - x0 * a[i][j].Coe) / a[i][j].Coe);
+					}
+					else if (i > 0 && i < row - 1 && j == 0) {
+						x[current].Green = (double)(x0 + w * (b[current] - ScalarN * x[a[i - 1][j].PosInArray].Green - ScalarS * x[a[i + 1][j].PosInArray].Green - ScalarE * x[a[i][j + 1].PosInArray].Green - x0 * a[i][j].Coe) / a[i][j].Coe);
+					}
+					else if (i > 0 && i < row - 1 && j == col - 1) {
+						x[current].Green = (double)(x0 + w * (b[current] - ScalarN * x[a[i - 1][j].PosInArray].Green - ScalarS * x[a[i + 1][j].PosInArray].Green - ScalarW * x[a[i][j - 1].PosInArray].Green - x0 * a[i][j].Coe) / a[i][j].Coe);
+					}
+					else if (i == 0 && j == 0) {
+						x[current].Green = (double)(x0 + w * (b[current] - ScalarS * x[a[i + 1][j].PosInArray].Green - ScalarE * x[a[i][j + 1].PosInArray].Green - x0 * a[i][j].Coe) / a[i][j].Coe);
+					}
+					else if (i == 0 && j == col - 1) {
+						x[current].Green = (double)(x0 + w * (b[current] - ScalarS * x[a[i + 1][j].PosInArray].Green - ScalarW * x[a[i][j - 1].PosInArray].Green - x0 * a[i][j].Coe) / a[i][j].Coe);
+					}
+					else if (i == row - 1 && j == col - 1) {
+						x[current].Green = (double)(x0 + w * (b[current] - ScalarN * x[a[i - 1][j].PosInArray].Green - ScalarW * x[a[i][j - 1].PosInArray].Green - x0 * a[i][j].Coe) / a[i][j].Coe);
+					}
+					else if (i == row - 1 && j == 0) {
+						x[current].Green = (double)(x0 + w * (b[current] - ScalarN * x[a[i - 1][j].PosInArray].Green - ScalarE * x[a[i][j + 1].PosInArray].Green - x0 * a[i][j].Coe) / a[i][j].Coe);
+					}
+					if (fabs(x[current].Green - x0) > norm) norm = fabs(x[current].Green - x0);  //norm计算范数
+				}
+			}
+		}
+		if (norm < eps)  break;
+	}
+
+	for (k = 0; k < kmax; k++)
+	{
+		double norm = 0;
+		//cout << x[1].Red << " " << b[1] << " " << x[a[2][1].PosInArray].Red << " " << x[a[0][1].PosInArray].Red << " " << x[a[1][2].PosInArray].Red << " " << x[a[1][0].PosInArray].Red << endl;
+		for (i = 0; i < row; i++)
+		{
+			for (j = 0; j < col; j++) {
+				if (a[i][j].Iscolored == 0) {
+					current = a[i][j].PosInArray;
+					double x0 = x[current].Blue;
+					if (i > 0 && i < row - 1 && j > 0 && j < col - 1) {
+						x[current].Blue = (double)(x0 + w * (b[current] - ScalarS * x[a[i + 1][j].PosInArray].Blue - ScalarN * x[a[i - 1][j].PosInArray].Blue - ScalarE * x[a[i][j + 1].PosInArray].Blue - ScalarW * x[a[i][j - 1].PosInArray].Blue - x0 * a[i][j].Coe) / a[i][j].Coe);
+					}
+					else if (i == 0 && j > 0 && j < col - 1) {
+						x[current].Blue = (double)(x0 + w * (b[current] - ScalarS * x[a[i + 1][j].PosInArray].Blue - ScalarE * x[a[i][j + 1].PosInArray].Blue - ScalarW * x[a[i][j - 1].PosInArray].Blue - x0 * a[i][j].Coe) / a[i][j].Coe);
+					}
+					else if (i == row - 1 && j > 0 && j < col - 1) {
+						x[current].Blue = (double)(x0 + w * (b[current] - ScalarN * x[a[i - 1][j].PosInArray].Blue - ScalarE * x[a[i][j + 1].PosInArray].Blue - ScalarW * x[a[i][j - 1].PosInArray].Blue - x0 * a[i][j].Coe) / a[i][j].Coe);
+					}
+					else if (i > 0 && i < row - 1 && j == 0) {
+						x[current].Blue = (double)(x0 + w * (b[current] - ScalarN * x[a[i - 1][j].PosInArray].Blue - ScalarS * x[a[i + 1][j].PosInArray].Blue - ScalarE * x[a[i][j + 1].PosInArray].Blue - x0 * a[i][j].Coe) / a[i][j].Coe);
+					}
+					else if (i > 0 && i < row - 1 && j == col - 1) {
+						x[current].Blue = (double)(x0 + w * (b[current] - ScalarN * x[a[i - 1][j].PosInArray].Blue - ScalarS * x[a[i + 1][j].PosInArray].Blue - ScalarW * x[a[i][j - 1].PosInArray].Blue - x0 * a[i][j].Coe) / a[i][j].Coe);
+					}
+					else if (i == 0 && j == 0) {
+						x[current].Blue = (double)(x0 + w * (b[current] - ScalarS * x[a[i + 1][j].PosInArray].Blue - ScalarE * x[a[i][j + 1].PosInArray].Blue - x0 * a[i][j].Coe) / a[i][j].Coe);
+					}
+					else if (i == 0 && j == col - 1) {
+						x[current].Blue = (double)(x0 + w * (b[current] - ScalarS * x[a[i + 1][j].PosInArray].Blue - ScalarW * x[a[i][j - 1].PosInArray].Blue - x0 * a[i][j].Coe) / a[i][j].Coe);
+					}
+					else if (i == row - 1 && j == col - 1) {
+						x[current].Blue = (double)(x0 + w * (b[current] - ScalarN * x[a[i - 1][j].PosInArray].Blue - ScalarW * x[a[i][j - 1].PosInArray].Blue - x0 * a[i][j].Coe) / a[i][j].Coe);
+					}
+					else if (i == row - 1 && j == 0) {
+						x[current].Blue = (double)(x0 + w * (b[current] - ScalarN * x[a[i - 1][j].PosInArray].Blue - ScalarE * x[a[i][j + 1].PosInArray].Blue - x0 * a[i][j].Coe) / a[i][j].Coe);
+					}
+					if (fabs(x[current].Blue - x0) > norm) norm = fabs(x[current].Blue - x0);  //norm计算范数
+				}
+			}
+
+		}
+		if (norm < eps)  break;
+	}
+	
+	count = 0;
+	for (i = 0; i < row; i++) {
+		uchar* data = img2.ptr<uchar>(i);
+		for (j = 0; j < col; j++) {
+			data[j * 3] = (uchar)x[count].Red;
+			data[j * 3 + 1] = (uchar)x[count].Green;
+			data[j * 3 + 2] = (uchar)x[count].Blue;
+			count++;
+		}
+	}
+	
+    
+
+    /*for (i = 0; i < row; i++) {
+		uchar* data = img2.ptr<uchar>(i);
+		for (j = 0; j < col; j++) {
+			data[j * 3] = (uchar)a[i][j].Red;
+			data[j * 3 + 1] = (uchar)a[i][j].Green;
+			data[j * 3 + 2] = (uchar)a[i][j].Blue;
+		}
+	}*/
+
+	printf("program end");
+	cv::imshow("twindow", img2);
+	cv::imwrite("u11.bmp", img2);
+	for (i = 0; i < row ; i++) {
+		free(a[i]);
+	}
+	free (a);
+	end = clock();
+	double endtime = (double)(end - start) / CLOCKS_PER_SEC;
+	printf("%lf \n", endtime);
+	cv::waitKey(0);
+	return 0;
+}
